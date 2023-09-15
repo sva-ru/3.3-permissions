@@ -13,7 +13,6 @@ class UserSerializer(serializers.ModelSerializer):
                   'last_name',)
 
 class AdvertisementSerializer(serializers.ModelSerializer):
-    """Serializer для объявления."""
     creator = UserSerializer(
         read_only=True)
     class Meta:
@@ -22,21 +21,14 @@ class AdvertisementSerializer(serializers.ModelSerializer):
                   'status', 'created_at', 'creator')
 
     def create(self, validated_data):
-        """Метод для создания"""
-
-        # Простановка значения поля создатель по-умолчанию.
-        # Текущий пользователь является создателем объявления
-        # изменить или переопределить его через API нельзя.
-        # обратите внимание на `context` – он выставляется автоматически
-        # через методы ViewSet.
-        # само поле при этом объявляется как `read_only=True`
         validated_data["creator"] = self.context["request"].user
+        print(validated_data["creator"])
         return super().create(validated_data)
 
     def validate(self, data):
-        """Метод для валидации. Вызывается при создании и обновлении."""
-        advertisemen_count = Advertisement.objects.filter(creator_id=self.initial_data.get('creator_id'),
-                                                          status='OPEN').count()
-        if advertisemen_count >= 10:
+        advertisemen_count = Advertisement.objects.filter(creator=self.context["request"].user,
+                                                           status='OPEN').count()
+        status = self.initial_data.get('status')
+        if advertisemen_count >= 10 and status != 'CLOSED':
             raise ValidationError(['No more than 10 active ads are allowed'])
         return data
